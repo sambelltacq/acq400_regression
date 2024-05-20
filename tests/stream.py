@@ -15,15 +15,15 @@ class Stream(generic):
 
     dir_fmt = "{type}_{runtime}s"
     
-    runtime = 30
-    
+    @staticmethod
     def get_args(parser):
+        """Test specific arguments"""
+        parser.add_argument('--siggen',  help='signal generator hostname', required=True)
         parser.add_argument('--runtime', default=30, type=int, help=f"stream runtime")
         return parser
 
     def run(self):
-        self.runtime = ifnotset(self.args.runtime, self.runtime)
-        self.save_state('runtime', self.runtime)
+        self.save_state('runtime', self.args.runtime)
         self.wavelength = self.args.divisor #add into args
         
         freq, voltage = self.get_freq_and_voltage()
@@ -43,47 +43,34 @@ class Stream(generic):
         for run in self.get_run():
             results = []
             self.uuts.abort()
-            self.uuts.stream_to_host()
+            
+            self.log.info(f"Streaming to host for {self.args.runtime}s")
+            
+            self.uuts.stream_to_host(runtime=self.args.runtime)
+            
             dataset = self.th.import_dataset('HOST')
             results.append(self.check_spad(dataset))
             
             if not self.check_passed(results): break
         self.log.info(f"All runs complete {self.run}/{self.runs}") 
             
+            
 if __name__ == '__main__':
     print('running stream')
     from acq400_regression import Test_Handler
     
-    #add args?
-    #import regressin test handelr
-    #parser args
-    #set test
-    #run test
-    
-    
-    
     """
-    1)
-    from main
-    
-    th = TH() no args?
-    th.parser_args()
-    th.run_tests(th.args.tests)
-    
-    from single test
-    
-    th = TH()
-    th.parser_args()
-    th.run_tests(stream)
-    
-    2)
-    from main
-    
-    args = TH.parser_args() can be passed in 
-    th = TH(args)
-    th.run_tests()
-    
-    
+    if main
+        args = th.get_args()
+        th = test_handler(args)
+        th.run_tests(args.tests)
+            each test check if has get_args parser args and merge with current args
+            
+    if single
+        args = th.get_args()
+        th = test_handler(args)
+        th.run_tests(test_name)
+            each test(1) check if has get_args parser args and merge with current args
     
     
     

@@ -175,9 +175,9 @@ def custom_legend(plt):
     
 def get_default_parser():
     parser = CustomArgumentParser(description='acq400_regression default argparser', conflict_handler='resolve')
-    #handler args
+    
+    #Global args
     parser.add_argument('--tests', '--test', type=ArgTypes.list_of_strings, required=True, help='list of tests post,prepost')
-    parser.add_argument('--siggen', help='signal generator hostname')
     parser.add_argument('--save', type=int, default=1, help='0: no save 1: save results + plot to file')
     parser.add_argument('--url', default=None, help='remote server to post results')
     parser.add_argument('--channels', type=ArgTypes.list_of_channels, default=[1], help=f"Channels to test 1,2,3,4 or all")
@@ -185,16 +185,16 @@ def get_default_parser():
     parser.add_argument('--plot', default=1, type=int, help='Plot result 0: no plot, 1: plot, -1: plot on error')
     parser.add_argument('--divisor', default=20000, type=int, help="Divisor for clk freq") #chaneg to wavelen
     parser.add_argument('--cycles', default=1, type=int, help='number of cycles')
-    #parser.add_argument('--tolerance', default=0.035, type=float, help='wave comparison tolerance')
     parser.add_argument('--tolerance', default=0.035, type=float, help='wave comparison tolerance')
     parser.add_argument('--root', default='results', help=f"root dir to store results")
     parser.add_argument('--debug', default=False, action='store_true', help=f"Enabled debug")
     parser.add_argument('--master', default=None, help=f"override master uut")
     parser.add_argument('--master_role', default=None, help=f"master role")
     parser.add_argument('--spad', default=None, help=f"spad value")
-    #parser.add_argument('--spad', default=None, type=ArgTypes.Trinary, help=f"spad value")
+    #parser.add_argument('--spad', default=None, type=ArgTypes.Trinary, help=f"spad value") #TODO
     parser.add_argument('uutnames', nargs='+', help='list of uut hostnames')
     
+    """
     #test specific arguments move elsewhere
     parser.add_argument('--triggers', default='all', type=ArgTypes.list_of_trinarys, help='Triggers to test 1,0,0/1,0,1/1,1,1 or all')
     parser.add_argument('--events', default='all', type=ArgTypes.list_of_trinarys, help='Events to test 1,0,0/1,0,1 or all')
@@ -203,8 +203,7 @@ def get_default_parser():
     parser.add_argument('--translen', default=None, type=int, help=f"override rtm_translen")
     parser.add_argument('--runtime', default=None, type=int, help=f"override runtime")
     parser.add_argument('--timeout', default=None, type=int, help=f"override timeout")
-    
-    
+    """
     return parser
 
 

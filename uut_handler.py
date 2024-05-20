@@ -54,9 +54,10 @@ class uut_handler():
             uut.config = self.get_config(uut)
             
             
-            pprint(uut.config)
+            #pprint(uut.config)
             self.update_shots(uut) #remove me?
             self.conns[uutname] = uut
+            
         PR.Cyan(f"end __init__")
             
     def __getitem__(self, key):
@@ -362,12 +363,12 @@ class uut_handler():
     @all_uuts
     def stream_to_host(self, uut, blen=4096, runtime=5, max_bytes=None):
         """Stream data from the uut to a file on the host"""
-        
+
         uut.host_data = f"{uut.hostname}.stream.temp"
         buffer = bytearray(blen * uut.data_size)
         view = memoryview(buffer).cast('B')
         
-        self.log.debug(f"Streaming from {uut.hostname} to {uut.host_data}")
+        self.log.debug(f"Streaming from {uut.hostname} to {uut.host_data} for {runtime}s")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((uut.hostname, AcqPorts.STREAM))
             
@@ -388,7 +389,7 @@ class uut_handler():
                     fp.write(buffer[:nbytes])
                     
                     if runtime and not max_bytes and time.time() - time_start > runtime:
-                        self.log.info(f"Reached max runtime")
+                        self.log.info(f"Reached max runtime ")
                         break
                     
                     if max_bytes and total_bytes >= max_bytes:

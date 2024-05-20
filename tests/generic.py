@@ -12,8 +12,6 @@ import time
 
 class generic():
     test_type = 'generic'
-    
-    exec_pre = ['transient_defaults', 'siggen_required']
 
     triggers = [
         [1,0,0],
@@ -34,12 +32,11 @@ class generic():
     dir_fmt = "{type}_{timestamp}"
 
     def __init__(self, th):
-        PR.Green('test inited')
         self.th = th
         self.args = th.args
         self.uuts = th.uuts
         self.log = th.log
-        self.siggen = self.th.siggen
+        self.siggen = self.th.get_siggen()
         self.state = DotDict()
         self.results = DotDict()
         self.timestamp = 0
@@ -47,17 +44,10 @@ class generic():
         self.log.info(f"\n[{self.th.testname.title()}] Test Started")
 
         self.save_state('type', self.test_type)
-        
-    def transient_defaults(self):   
         self.save_state('channels', self.args.channels)
         self.save_state('tolerance', self.args.tolerance)
-        
-    def siggen_required(self):
-        if not self.th.siggen: raise Exception('Siggen required for test')
-        self.siggen = self.th.siggen
-        self.cycles = self.args.cycles
         self.save_state('cycles', self.args.cycles)
-        
+
     def catch_error(func):
         """Catches exceptions"""
         PR.Red("catch error start")
@@ -125,6 +115,8 @@ class generic():
         self.save_state('voltage', voltage)
         return freq, voltage
     
+    #Test methods
+    
     def check_spad(self, dataset):
         """check spad[0] is contigious"""
         self.log.info('Checking spad')
@@ -153,6 +145,7 @@ class generic():
         results = []
         
         """
+        FIXME
         find the event signature then compare to expected
         requires fixes to es finding TODO
         

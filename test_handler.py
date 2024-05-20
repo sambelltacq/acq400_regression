@@ -16,19 +16,9 @@ from acq400_regression.siggen_handler import siggen_handler
 from acq400_regression.misc import DotDict, custom_legend, to_hex
 
 
-
-
-"""
-th.
-th.get_args
-
-"""
-
-
 class TestException(Exception):
     def __init__(self, reason):
         super().__init__()
-
 
 class Test_Handler():
     uuts = None
@@ -43,7 +33,6 @@ class Test_Handler():
     def __init__(self, uutnames: list, args: dict={}):
         self.set_args(args)
         self.init_logger(self.args.get('debug', False))
-        self.set_siggen(self.args.get('siggen'))
         self.set_uuts(uutnames)
         self.timestart = self.gen_timestamp()
         self.set_test_dir()
@@ -76,6 +65,8 @@ class Test_Handler():
         """
         return None
     
+    #Handler init methods
+    
     def init_logger(self, debug=False, logfile='regtest.log'):
         level = 0 if debug else 20
         self.log = acq400_logger('acq400_regression', level=level, logfile=logfile)
@@ -85,48 +76,56 @@ class Test_Handler():
     def set_uuts(self, uutnames: list):
         self.uuts = uut_handler(uutnames, self.log, self.args.master, self.args.spad)
 
-    def set_siggen(self, siggen: str):
-        try:
-            self.siggen = siggen_handler(siggen, self.log)
-        except Exception as e:
-            if not siggen: return
-            self.log.warning(f"Unbale to connect to {siggen}")
-
     def set_args(self, args):
         if type(args) != dict:
             args = vars(args)
         self.args = DotDict(**args)
-
+        
+    def gen_timestamp(self):
+        fmt = "%y%m%d%H%M%S"
+        return time.strftime(fmt)
+        
+        
+        
+        
+        
     def get_channels(self, uut):
         return self.args.channels if self.args.channels != 'all' else range(1, uut.nchan + 1)
     
     def get_spad(self, uut):
-        return 
+        """returns spad mapped to channel index"""
+        factor = 1 if int(uut.s0.data32) else 2
+        spadlen = int(uut.s0.spad.split(',')[1])
+        spadstart = uut.nchan() - spadlen * factor
+        return {spad : spadstart + (spad * factor) for spad in range(spadlen)}
     
-    def gen_timestamp(self):
-        fmt = "%y%m%d%H%M%S"
-        return time.strftime(fmt)
+    def get_siggen(self):
+        if not self.siggen:
+            if self.args.has('siggen'):
+                self.siggen = siggen_handler(self.args.siggen, self.log)
+                PR.Green('connecting siggen')
+        return self.siggen
+            
 
 
 
 
 
 
-    #data methods
-
+    #Data Handling Methods
 
     def import_dataset(self, source='UUT'):
         """Imports data from source
-            source can be UUT or HOST or FILE (TODO)
-            raw data stored at hander.dataset[uut][data]
-            channel pointers at handler.dataset[uut][chans]
-            spad pointers at handler.dataset[uut][spad]
+            source can be UUT or HOST or FILE(TODO)
+            raw data stored at hander.dataset[uut].data
+            channel pointers at handler.dataset[uut].chan_data
+            spad pointers at handler.dataset[uut].spad_data
+            
         """
-        
         self.log.info('Offloading data')
         self.dataset = {}
         for uut in self.uuts:#TODO: cleanup
-            self.log.debug("Importing data data from {uut.hostname}")
+            self.log.debug(f"Importing data data from {uut.hostname}")
             data = DotDict()
             data.data_size = uut.data_size
             data.nchan = uut.nchan()
@@ -143,7 +142,6 @@ class Test_Handler():
                 
             data.spad_data = {}   
             for spad, spadchan in self.get_spad(uut).items():
-                print()
                 chans = [spadchan]
                 if uut.data_size == 2:
                     chans.append(spadchan + 1)
@@ -154,17 +152,13 @@ class Test_Handler():
             data.datalen = len(data.data[0])
             data.es_indexes = self.find_event_signatures(self.to_uint32(data.data))
             
-            pprint(data)
-            print(data)
+            if self.args.debug:
+                pprint(data)
+                
             self.dataset[uut.hostname] = data
+            
         return self.dataset
-    
-    def get_spad(self, uut):
-        """returns spad mapped to channel index"""
-        factor = 1 if int(uut.s0.data32) else 2
-        spadlen = int(uut.s0.spad.split(',')[1])
-        spadstart = uut.nchan() - spadlen * factor
-        return {spad : spadstart + (spad * factor) for spad in range(spadlen)}
+
     
     
     def read_channels_from_file(self, uut):             
@@ -175,15 +169,6 @@ class Test_Handler():
         dtype = np.int32 if int(uut.s0.data32) else np.int16
         remainder = int(os.path.getsize(uut.host_data) / uut.data_size) % nchan
         return np.fromfile(uut.host_data, dtype=dtype)[:-remainder].reshape(-1, nchan).T      
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     def to_uint32(self, data):
         """Converts data to uint32"""
@@ -211,6 +196,8 @@ class Test_Handler():
         mask = np.full(arrlen, True)
         if len(indexes) > 0: mask[indexes] = False
         return mask
+    
+    #data saving and plotting methods 
     
     def save_test(self):
         self.save_dataset()
@@ -262,8 +249,7 @@ class Test_Handler():
                 data.data.T.tofile(f)
     
     def save_event_signatures(self):
-        """Saves """
-        pprint(self.dataset)
+        """Saves event signatures in hex to file"""
         savedir = self.get_test_subdir()
         for uut, data in self.dataset.items():
             if len(data.es_indexes) > 0:
@@ -274,33 +260,10 @@ class Test_Handler():
                     self.log.info(f"Saving event signatures to {savepath}")
                     for es in data.es_indexes:
                         f.write(f"[{es}]: {' '.join(list(map(to_hex, data32.T[es])))}\n")
-                print(data32)
-                print('save indexes')
                 print(data32.T[data.es_indexes])
-        exit()
-        
-        
-        
-        
-        
-        
-
-    
-    def save_es(self): #TODO
-        print('hellow world')
-        """Save event signature samples to file"""
-        return None
-    
-    def print_es(self): #TODO
-        """print event signature samples"""
-        
-    def save_hex_cmd(self):
-        """save hex cmd string to save dir"""
-        print('hello')
         
     
     #file methods
-    
     
     def set_test_dir(self):
         """sets the test dir root/module/timestamp/"""
@@ -321,43 +284,46 @@ class Test_Handler():
         os.makedirs(path, exist_ok=True)
         return path
     
-
+    
+    #run test methods
 
     def run_tests(self, tests:list):
+        """Runs a list of tests"""
         for test in tests:
             self.run_test(test)
         self.log.info("All tests complete")
         if self.args.save: self.results_to_file()
         if self.args.url: self.send_to_remote(self.args.url)
+        
+    def add_test_args(self):
+        """Adds test specific args"""
+        if not hasattr(self.testclass, 'get_args'):
+            return
+        parser = argparse.ArgumentParser(add_help=False)
+        self.testclass.get_args(parser)
+        args = parser.parse_known_args()[0]
+        self.args.update(vars(args))
 
     def run_test(self, testname):
         self.import_test(testname)
-        self.run_pre()
-        #TODO: init test args here
-        
+        self.add_test_args()
+        self.test = self.testclass(self)
         self.test.run()
         return
+        """
         try:
-            self.import_test(testname)
-            self.run_pre()
-            self.test.run()
         except Exception as e:
             self.handle_test_error(e)
+        """
             
     def import_test(self, testname):
         """Import test from tests dir"""
         self.testname = testname
         self.moduri = f"acq400_regression.tests.{self.testname}"
         self.log.debug(f'Importing test: {self.moduri}')
-        self.test = getattr(importlib.import_module(self.moduri), self.testname.title())(self)
-        
-        self.test
-        
-    def run_pre(self):
-        if hasattr(self.test, "exec_pre"):
-            for func in self.test.exec_pre:
-                self.log.debug(f"exec_pre {func}")
-                getattr(self.test, func)()
+        self.testmodule = importlib.import_module(self.moduri)
+        self.testclass = getattr(self.testmodule, self.testname.title())
+        #self.test = getattr(self.testmodule, self.testname.title())(self)
         
     def handle_test_error(self, error):
         self.log.error(f"{self.testname} {error}")
@@ -365,6 +331,9 @@ class Test_Handler():
             self.test.save_state('errored', str(error))
             self.test.save_state('result', 'errored')
             self.stash_results()
+            
+            
+    #result handling methods
 
     def stash_results(self):
         """Stashes test state and test results"""        
@@ -372,7 +341,7 @@ class Test_Handler():
         if self.test.results:
             results['subtests'] = dict(self.test.results)
         self.test.results.clear()
-        pprint(results)
+        #pprint(results)
         self.stored_results.append(results)
         
     def update_subtest(self, testname, uut, results):
@@ -410,20 +379,5 @@ class Test_Handler():
     def upload_file(self, url):
         """Upload all files in to be uploaded list to remote server"""
 
-    def snapshot_knobs(self, stage):
-        """TODO:
-        Snap shot knob state at different stages of test
-        snapshot:
-            pre_shot:
-                uut
-                    knob and state
-            during_arm
-                uut
-                    knob and state
-            post_shot
-                uut
-                    knob and state
-        """
-        
-    def env_to_str(self, env):
+    def env_to_str(self, env): #move to misc
         return ' '.join([f"{k}={v}" for k, v in env.items()])
