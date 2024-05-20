@@ -56,22 +56,8 @@ class Stream(generic):
             
             
 if __name__ == '__main__':
-    print('running stream')
     from acq400_regression import Test_Handler
     
-    """
-    if main
-        args = th.get_args()
-        th = test_handler(args)
-        th.run_tests(args.tests)
-            each test check if has get_args parser args and merge with current args
-            
-    if single
-        args = th.get_args()
-        th = test_handler(args)
-        th.run_tests(test_name)
-            each test(1) check if has get_args parser args and merge with current args
-    
-    
-    
-    """
+    args = Test_Handler.parser.parse_known_args()[0]
+    th = Test_Handler(uutnames=args.uutnames, args=args)
+    th.run_test('stream')

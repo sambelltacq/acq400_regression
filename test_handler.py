@@ -16,6 +16,8 @@ from acq400_regression.siggen_handler import siggen_handler
 from acq400_regression.misc import DotDict, custom_legend, to_hex
 
 
+from acq400_regression.custom_parser import get_default_parser
+
 class TestException(Exception):
     def __init__(self, reason):
         super().__init__()
@@ -24,6 +26,7 @@ class Test_Handler():
     uuts = None
     siggen = None
     test = None
+    parser = get_default_parser()
 
     args = {}
     dataset = {}
@@ -269,10 +272,7 @@ class Test_Handler():
         """sets the test dir root/module/timestamp/"""
         modules = [module for module in self.uuts.get_all_modules() if module.startswith('ACQ')]
         most_common_module = max(set(modules), key=modules.count)
-        pprint(self.args)
-        PR.Yellow(self.args.root)
-        PR.Yellow(most_common_module)
-        PR.Yellow(self.timestart)
+        self.log.debug(f"most_common_module {most_common_module}")
         self.dir = os.path.join(self.args.root, most_common_module, self.timestart)
 
     def get_test_subdir(self):
@@ -305,6 +305,7 @@ class Test_Handler():
         self.args.update(vars(args))
 
     def run_test(self, testname):
+        self.log.debug(f"Running {testname}")
         self.import_test(testname)
         self.add_test_args()
         self.test = self.testclass(self)
