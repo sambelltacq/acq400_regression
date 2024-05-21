@@ -20,9 +20,23 @@ misc:
 git clone https://github.com/D-TACQ/acq400_hapi
 cd acq400_hapi
 git clone https://github.com/sambelltacq/acq400_regression
+
+requires numpy and matplotlib
 ```
 
 ### Running
+
+```
+#in acq400_hapi dir
+source ./setpath2
+
+#to run multiple tests 
+./acq400_regression/main.py --tests=post,prepost,rtm,stream acq2106_130
+
+#to run a specific test
+./acq400_regression/tests/stream.py acq2106_130
+
+```
 
 test results are saved in named dirs 
 ```
