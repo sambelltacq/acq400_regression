@@ -58,8 +58,6 @@ class uut_handler():
             self.update_shots(uut) #remove me?
             self.conns[uutname] = uut
             
-        PR.Cyan(f"end __init__")
-            
     def __getitem__(self, key):
         """uuts[hostname/index] helper"""
         if isinstance(key, int):
@@ -317,8 +315,11 @@ class uut_handler():
 
     @all_uuts
     def wait_pre_complete(self, uut, target):
+        ttime = target / uut.clk
+        print(f"ttime {ttime}")
         while True:
             elapsed = uut.statmon.get_elapsed() / uut.nchan()
+            print(f"target {target} elapsed {elapsed}")
             if elapsed > target:
                 self.log.debug(f"{uut.hostname} pre full")
                 time.sleep(2)

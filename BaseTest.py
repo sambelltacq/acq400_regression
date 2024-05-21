@@ -10,8 +10,8 @@ from matplotlib import pyplot as plt
 
 import time
 
-class generic():
-    test_type = 'generic'
+class BaseTest():
+    test_type = 'base'
 
     triggers = [
         [1,0,0],
@@ -105,41 +105,47 @@ class generic():
         """Returns true if any trinary has source soft"""
         return any([tri(t, 'source') == 1 for t in args])
 
-    def get_freq_and_voltage(self, divisor=None):
+    def get_freq_and_voltage(self, wavelength=None):
         """Gets ideal freq and voltage for siggen"""
-        divisor = divisor if divisor else self.args.divisor
+        wavelength = ifnotset(wavelength, self.args.wavelength)
         clk = [uut.clk for uut in self.uuts][0]
-        freq = clk / divisor
+        freq = clk / wavelength
         voltage = min([uut.voltage for uut in self.uuts])
         self.save_state('freq', freq)
         self.save_state('voltage', voltage)
         return freq, voltage
     
+    
     #Test methods
     
-    def add_removed_es(self):
+    def add_removed_es(self, dataset, indices):
         """add removed es into mask"""
         return
+        for uutname, data in dataset.items():
+            print(f"{uutname} {data.es_indexes}")
+            data.es_indexes.extend(indices)
+            print(f"{uutname} {data.es_indexes}")
+        return
     
-    def check_spad(self, dataset):
+    def check_spad(self, dataset, exclude=[]):
         """check spad[0] is contigious"""
         self.log.info('Checking spad')
         results = []
+        
         for uutname, data in dataset.items():
             if len(data.spad_data) < 1:
                 self.log.debug(f"{uutname} No spad")
                 continue
             result = DotDict()
-            passed = True
             diffs = np.diff(data.spad_data[0])
-            contigious = np.all(diffs == 1) #use event mask here to fix missing samples
-            if contigious:
+            mask = self.th.mask_es(len(diffs), exclude)
+            passed = np.all(diffs[mask] == 1) #use event mask here to fix missing samples
+            if passed:
                 self.log.success(f"{uutname} spad[0] is contigious")
                 result.spad0_contigious = True
             else:
                 self.log.failure(f"{uutname} spad[0] is not contigious")
                 result.spad0_contigious = False
-                passed = False
                 self.log.debug(np.where(diffs != 1))
             
             results.append(passed)
@@ -148,57 +154,24 @@ class generic():
 
     def check_es(self, dataset, expected_indices=[]):
         """Check the event signatures are at expected indexes"""
-        self.log.info('Checking event signature')
-        #first_event = ifnotset(first_event, self.pre)
+        self.log.info('Checking event signatures')
         results = []
-
-        """
-        in post, prepost event signatures are stripped out
         
-        
-        FIXME
-        find the event signature then compare to expected
-        requires fixes to es finding TODO
-        
-        self.th.update_subtest('es', uutname, result) #fix me
-        correct_position
-        """
-        """
-        for uutname, item in dataset.items():
+        for uutname, data in dataset.items():
             result = DotDict()
-            passed = True
+            passed = np.array_equal(data.es_indexes, expected_indices)
             
-            
-            
-            PR.Red(item.es_indexes)
-            
-            if len(item.es_indexes) > 0:
-                print(f'ES FOUND {item.es_indexes}')
-                if item.es_indexes[0] == first_event:
-                    self.log.success(f"{uutname} First es at correct index")
-                    result.es_first_pos = True
-                else:
-                    self.log.failure(f"{uutname} First es at wrong index")
-                    result.es_first_pos = False
-                    passed = False
-                    
-                #TODO: debug print first es sample here
+            if passed:
+                self.log.success(f"{uutname} Event signatures are at expected indexes")
+                result.correct_indexes = True
+            else:
+                self.log.failure(f"{uutname} Event signatures are not at expected indexes")
+                result.correct_indexes = False
                 
-            if len(item.es_indexes) > 1:
-                diffs = np.diff(item.es_indexes)
-                equidistant = all(d == diffs[0] for d in diffs)
-                if equidistant:
-                    self.log.success(f"{uutname} event signatures are equidistant")
-                    result.es_equidistant = True
-                else:
-                    self.log.failure(f"{uutname} event signatures are not equidistant")
-                    result.es_equidistant = False
-                    passed = False
-
             results.append(passed)
-        return True
-        """
+            self.th.update_subtest('event_signature', uutname, result) #fix me   
             
+        return all(results)
     
     def check_wave(self, dataset, ideal_wave, tolerance):
         """Compares each channel to an ideal wave generated from known values"""
@@ -223,11 +196,10 @@ class generic():
                     
             results.append(passed)
             
-            result.sine_synchronous = passed
+            result.synchronous = passed
             if len(bad_chans) > 0: result.bad_chans = bad_chans
               
             self.th.update_subtest('wave', uutname, result)
-            
         return all(results)
             
     def get_ideal_wave(self, dataset, soft=False, rising=True, scale=None):

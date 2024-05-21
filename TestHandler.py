@@ -71,13 +71,7 @@ class TestHandler():
     def run_test(self, testname):
         self.log.debug(f"Running {testname}")
         self.import_test(testname)
-        PR.Yellow('Before')
-        pprint(self.args)
         self.add_test_args()
-        
-        PR.Yellow('After')
-        pprint(self.args)
-        
         self.test = self.testclass(self)
         self.test.run()
         return
@@ -108,11 +102,11 @@ class TestHandler():
     def import_test(self, testname):
         """Import test from tests dir"""
         self.testname = testname
-        self.moduri = f"acq400_regression.tests.{self.testname}"
-        self.log.debug(f'Importing test: {self.moduri}')
-        self.testmodule = importlib.import_module(self.moduri)
-        self.testclass = getattr(self.testmodule, self.testname.title())
-        #self.test = getattr(self.testmodule, self.testname.title())(self)
+        moduri = f"acq400_regression.tests.{testname}"
+        classuri = f"{testname.title()}Test"
+        self.log.debug(f"Importing test: {moduri}.{classuri}")
+        self.testmodule = importlib.import_module(moduri)
+        self.testclass = getattr(self.testmodule, classuri)
         
     def handle_test_error(self, error):
         self.log.error(f"{self.testname} {error}")
@@ -188,6 +182,7 @@ class TestHandler():
             data.es_indexes = self.find_event_signatures(self.to_uint32(data.data))
             
             if self.args.debug:
+                print(uut.hostname)
                 pprint(data)
                 
             self.dataset[uut.hostname] = data
@@ -293,7 +288,6 @@ class TestHandler():
                     self.log.info(f"Saving event signatures to {savepath}")
                     for es in data.es_indexes:
                         f.write(f"[{es}]: {' '.join(list(map(to_hex, data32.T[es])))}\n")
-                print(data32.T[data.es_indexes])
         
     
     #file methods

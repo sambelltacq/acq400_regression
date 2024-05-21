@@ -2,10 +2,10 @@
 
 """Tests uuts streaming"""
 
-from acq400_regression.tests.generic import generic
+from acq400_regression.BaseTest import BaseTest
 
 
-class Stream(generic):
+class StreamTest(BaseTest):
     test_type = "stream"
 
     dir_fmt = "{type}_{runtime}s"
@@ -15,6 +15,7 @@ class Stream(generic):
         """Test specific arguments"""
         parser.add_argument('--siggen',  help='signal generator hostname', required=True)
         parser.add_argument('--runtime', default=30, type=int, help=f"stream runtime")
+        parser.add_argument('--triggers', default='all', type=parser.list_of_trinarys, help='Triggers to test 1,0,0/1,0,1/1,1,1 or all')
         return parser
 
     def run(self):

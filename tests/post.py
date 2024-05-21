@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-"""Tests uuts post transient shot"""
+"""Tests post transient shot"""
 
-from acq400_regression.tests.generic import generic
+from acq400_regression.BaseTest import BaseTest
 from acq400_regression.misc import tri
 
 from acq400_hapi import PR, pprint #remove me after testing
 
 
-class Post(generic):
+class PostTest(BaseTest):
     test_type = "post"
 
     post = 100000
@@ -27,7 +27,8 @@ class Post(generic):
         self.post = self.args.post
         self.save_state('post', self.post)
         
-        self.wavelength = self.args.divisor
+        self.wavelength = self.args.wavelength
+        
         freq, voltage = self.get_freq_and_voltage()
 
         for trigger in self.get_trigger():

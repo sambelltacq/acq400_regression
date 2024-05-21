@@ -2,20 +2,14 @@
 
 """Tests prepost transient"""
 
-from acq400_regression.tests.generic import generic
+from acq400_regression.BaseTest import BaseTest
 from acq400_regression.misc import tri
 
 from acq400_hapi import PR, pprint, pv #remove me after testing
 
 
-class Prepost(generic):
+class PrepostTest(BaseTest):
     test_type = "prepost"
-    
-    triggers = [
-        [1,0,0],
-        [1,0,1],
-        [1,1,1],
-    ]
 
     dir_fmt = "{type}_trg{trigger}_evt{event}"
     
@@ -36,11 +30,12 @@ class Prepost(generic):
         self.pre = self.args.pre
         self.save_state('pre', self.pre)
         
-        self.wavelength = self.args.divisor
+        self.wavelength = self.args.wavelength
         
         freq, voltage = self.get_freq_and_voltage()
 
         for trigger in self.get_trigger():
+            
             for event in self.get_event():
 
                 self.siggen.config_params(freq, voltage)
@@ -72,7 +67,7 @@ class Prepost(generic):
 
             if tri(trigger, 'source') != 1: self.siggen.trigger(delay=1)
 
-            self.uuts.wait_pre_complete(2 * self.pre)
+            self.uuts.wait_pre_complete(self.pre)
 
             if tri(event, 'source') != 1: self.siggen.trigger()
 
@@ -81,7 +76,7 @@ class Prepost(generic):
 
             dataset = self.th.import_dataset()
             
-            #results.append(self.check_spad(dataset)) #removed es break spad
+            results.append(self.check_spad(dataset, exclude=[self.pre - 1]))
             
             ideal_wave, tolerance, dtype = self.get_ideal_wave(dataset, self.is_soft(trigger), self.is_rising(event))
             results.append(self.check_wave(dataset, ideal_wave, tolerance))
@@ -89,3 +84,11 @@ class Prepost(generic):
             if not self.check_passed(results): break
         
         self.log.info(f"All runs complete {run}/{self.args.runs}")
+        
+        
+if __name__ == '__main__':
+    from acq400_regression import TestHandler
+    
+    args = TestHandler.parser_args()
+    th = TestHandler(uutnames=args.uutnames, args=args)
+    th.run_test('prepost')

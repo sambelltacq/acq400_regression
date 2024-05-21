@@ -38,10 +38,8 @@ class Waveform:
         rising=True,
         waveform='SINE'
         ):
-        PR.Purple("[generate_ideal_wave]")
         """Returns Ideal wave from args"""
         sense = 1 if rising else -1
-        print(f"if soft {soft}")
         if soft:
             cycles = None
             eindex = 0
