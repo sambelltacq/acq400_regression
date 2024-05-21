@@ -16,17 +16,16 @@ from acq400_regression.siggen_handler import siggen_handler
 from acq400_regression.misc import DotDict, custom_legend, to_hex
 
 
-from acq400_regression.custom_parser import get_default_parser
+from acq400_regression.custom_parser import get_default_parser, RegressionParser
 
 class TestException(Exception):
     def __init__(self, reason):
         super().__init__()
 
-class Test_Handler():
+class TestHandler():
     uuts = None
     siggen = None
     test = None
-    parser = get_default_parser()
 
     args = {}
     dataset = {}
@@ -40,34 +39,6 @@ class Test_Handler():
         self.timestart = self.gen_timestamp()
         self.set_test_dir()
         
-    def parser_args(self):
-        """
-            1)
-            get args
-            parser known args
-            init uuts
-            init siggen
-            init test dir
-            
-        
-        """
-        print('parse args here')
-        return 'hello world'
-    
-    def import_new_args():
-        """
-        parser
-        parser = self.test.get_args(parser)
-        args = parser.parser_args()
-        self.args combine with args
-        
-        use custom argparser 
-        
-        if parser contains 
-        
-        """
-        return None
-    
     #Handler init methods
     
     def init_logger(self, debug=False, logfile='regtest.log'):
@@ -87,10 +58,72 @@ class Test_Handler():
     def gen_timestamp(self):
         fmt = "%y%m%d%H%M%S"
         return time.strftime(fmt)
+    
+    @staticmethod
+    def parser_args():
+        """Parses args"""
+        parser = get_default_parser()
+        return parser.parse_known_args()[0]
+    
+    
+    #run test methods
+
+    def run_test(self, testname):
+        self.log.debug(f"Running {testname}")
+        self.import_test(testname)
+        PR.Yellow('Before')
+        pprint(self.args)
+        self.add_test_args()
+        
+        PR.Yellow('After')
+        pprint(self.args)
+        
+        self.test = self.testclass(self)
+        self.test.run()
+        return
+        """
+        try:
+        except Exception as e:
+            self.handle_test_error(e)
+        """
+
+    def run_tests(self, tests:list):
+        """Runs a list of tests"""
+        for test in tests:
+            self.run_test(test)
+        self.log.info("All tests complete")
+        if self.args.save: self.results_to_file()
+        if self.args.url: self.send_to_remote(self.args.url)
+        
+    def add_test_args(self):
+        """Adds test specific args"""
+        if not hasattr(self.testclass, 'get_args'):
+            return
+        
+        parser = RegressionParser(add_help=False)
+        self.testclass.get_args(parser)
+        args = parser.parse_known_args()[0]
+        self.args.update(vars(args))
+
+    def import_test(self, testname):
+        """Import test from tests dir"""
+        self.testname = testname
+        self.moduri = f"acq400_regression.tests.{self.testname}"
+        self.log.debug(f'Importing test: {self.moduri}')
+        self.testmodule = importlib.import_module(self.moduri)
+        self.testclass = getattr(self.testmodule, self.testname.title())
+        #self.test = getattr(self.testmodule, self.testname.title())(self)
+        
+    def handle_test_error(self, error):
+        self.log.error(f"{self.testname} {error}")
+        if self.test:
+            self.test.save_state('errored', str(error))
+            self.test.save_state('result', 'errored')
+            self.stash_results()
         
         
         
-        
+    #get methods
         
     def get_channels(self, uut):
         return self.args.channels if self.args.channels != 'all' else range(1, uut.nchan + 1)
@@ -106,7 +139,6 @@ class Test_Handler():
         if not self.siggen:
             if self.args.has('siggen'):
                 self.siggen = siggen_handler(self.args.siggen, self.log)
-                PR.Green('connecting siggen')
         return self.siggen
             
 
@@ -121,11 +153,11 @@ class Test_Handler():
         """Imports data from source
             source can be UUT or HOST or FILE(TODO)
             raw data stored at hander.dataset[uut].data
-            channel pointers at handler.dataset[uut].chan_data
-            spad pointers at handler.dataset[uut].spad_data
+            channel pointers at handler.dataset[uut].channels
+            spad pointers at handler.dataset[uut].spad
             
         """
-        self.log.info('Offloading data')
+        self.log.info('Importing data')
         self.dataset = {}
         for uut in self.uuts:#TODO: cleanup
             self.log.debug(f"Importing data data from {uut.hostname}")
@@ -138,10 +170,10 @@ class Test_Handler():
             elif source == 'HOST':
                 data.data = self.read_channels_from_file(uut) #add multi file support          
             
-            data.chan_data = {}
+            data.channels = {}
             for chan in self.get_channels(uut):
                 if chan > uut.nchan(): continue
-                data.chan_data[chan] = data.data[chan - 1]
+                data.channels[chan] = data.data[chan - 1]
                 
             data.spad_data = {}   
             for spad, spadchan in self.get_spad(uut).items():
@@ -162,8 +194,6 @@ class Test_Handler():
             
         return self.dataset
 
-    
-    
     def read_channels_from_file(self, uut):             
         self.log.debug(f"Importing data from {uut.host_data}")
         #check file exists here
@@ -200,6 +230,7 @@ class Test_Handler():
         if len(indexes) > 0: mask[indexes] = False
         return mask
     
+    
     #data saving and plotting methods 
     
     def save_test(self):
@@ -220,8 +251,8 @@ class Test_Handler():
             
             mask = self.mask_es(data.datalen, data.es_indexes)
             
-            for chan, data in data.chan_data.items():
-                plt.plot(data[mask], label=f"CH{chan}")
+            for chan, chan_data in data.channels.items():
+                plt.plot(chan_data[mask], label=f"CH{chan}")
 
             if hasattr(self.test, 'ideal_wave'):
                 plt.plot(self.test.ideal_wave, label=f"ideal_wave")
@@ -237,7 +268,6 @@ class Test_Handler():
         if plot:
             self.log.info("Plotting")
             plt.show()
-
         
     def save_dataset(self):
         """Saves data to file"""
@@ -285,53 +315,7 @@ class Test_Handler():
         return path
     
     
-    #run test methods
 
-    def run_tests(self, tests:list):
-        """Runs a list of tests"""
-        for test in tests:
-            self.run_test(test)
-        self.log.info("All tests complete")
-        if self.args.save: self.results_to_file()
-        if self.args.url: self.send_to_remote(self.args.url)
-        
-    def add_test_args(self):
-        """Adds test specific args"""
-        if not hasattr(self.testclass, 'get_args'):
-            return
-        parser = argparse.ArgumentParser(add_help=False)
-        self.testclass.get_args(parser)
-        args = parser.parse_known_args()[0]
-        self.args.update(vars(args))
-
-    def run_test(self, testname):
-        self.log.debug(f"Running {testname}")
-        self.import_test(testname)
-        self.add_test_args()
-        self.test = self.testclass(self)
-        self.test.run()
-        return
-        """
-        try:
-        except Exception as e:
-            self.handle_test_error(e)
-        """
-            
-    def import_test(self, testname):
-        """Import test from tests dir"""
-        self.testname = testname
-        self.moduri = f"acq400_regression.tests.{self.testname}"
-        self.log.debug(f'Importing test: {self.moduri}')
-        self.testmodule = importlib.import_module(self.moduri)
-        self.testclass = getattr(self.testmodule, self.testname.title())
-        #self.test = getattr(self.testmodule, self.testname.title())(self)
-        
-    def handle_test_error(self, error):
-        self.log.error(f"{self.testname} {error}")
-        if self.test:
-            self.test.save_state('errored', str(error))
-            self.test.save_state('result', 'errored')
-            self.stash_results()
             
             
     #result handling methods

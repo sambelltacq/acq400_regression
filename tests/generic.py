@@ -122,20 +122,22 @@ class generic():
         self.log.info('Checking spad')
         results = []
         for uutname, data in dataset.items():
+            if len(data.spad_data) < 1:
+                self.log.debug(f"{uutname} No spad")
+                continue
             result = DotDict()
             passed = True
             contigious = np.all(np.diff(data.spad_data[0]) == 1)
             if contigious:
-                self.log.success(f"{uutname} SPAD[0] is contigious")
+                self.log.success(f"{uutname} spad[0] is contigious")
                 result.spad0_contigious = True
             else:
-                self.log.failure(f"{uutname} SPAD[0] is contigious")
+                self.log.failure(f"{uutname} spad[0] is contigious")
                 result.spad0_contigious = False
                 passed = False
             
             results.append(passed)
             self.th.update_subtest('spad', uutname, result) #fix me
-            
         return all(results)
 
     def check_es(self, dataset, expected_indices=[]):
@@ -143,8 +145,11 @@ class generic():
         self.log.info('Checking event signature')
         #first_event = ifnotset(first_event, self.pre)
         results = []
-        
+
         """
+        in post, prepost event signatures are stripped out
+        
+        
         FIXME
         find the event signature then compare to expected
         requires fixes to es finding TODO
@@ -192,7 +197,6 @@ class generic():
     def check_wave(self, dataset, ideal_wave, tolerance):
         """Compares each channel to an ideal wave generated from known values"""
         self.log.info('Checking wave')
-        #TODO: cleanup
         results = []
         for uutname, data in dataset.items():
             result = DotDict()
@@ -200,9 +204,8 @@ class generic():
             bad_chans = []
             
             mask = self.th.mask_es(len(data.data[0]), data.es_indexes)
-            PR.Red(mask)
             
-            for chan, chan_data in data.chans.items():
+            for chan, chan_data in data.channels.items():
                 sync = np.allclose(chan_data[mask], ideal_wave[mask], atol=tolerance)
  
                 if sync:
@@ -222,9 +225,10 @@ class generic():
         return all(results)
             
     def get_ideal_wave(self, dataset, soft=False, rising=True, scale=None):
-        PR.Purple("[get_ideal_wave]")
-        for uut in dataset:
-            for chan, chan_data in dataset[uut]['chans'].items():
+        """gets the ideal wave using channel data"""
+        self.log.debug(f"Generating ideal wave soft[{soft}] rising[{rising}] scale[{scale}]")
+        for uutname, data in dataset.items():
+            for chan, chan_data in data.channels.items():
                 
                 dtype = chan_data.dtype
                 tolerance = Waveform.get_tolerance(chan_data, self.args.tolerance)
@@ -249,6 +253,7 @@ class generic():
                 return ideal_wave, tolerance, dtype 
         
     def get_event_indexes(self): #fix me
+        #gen_expected_indeices
         """Gets event(s) index(s)"""
         if hasattr(self, 'eindex'): return self.eindex
         if not self.translen:

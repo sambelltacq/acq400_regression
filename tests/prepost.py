@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Tests uuts prepost transient shot"""
+"""Tests prepost transient"""
 
 from acq400_regression.tests.generic import generic
 from acq400_regression.misc import tri
@@ -17,19 +17,23 @@ class Prepost(generic):
         [1,1,1],
     ]
 
-    pre = 50000
-    post = 50000
-
     dir_fmt = "{type}_trg{trigger}_evt{event}"
     
-    def parser(parser):
-        print(f"prepost argparser here")
+    @staticmethod
+    def get_args(parser):
+        """Test specific arguments"""
+        parser.add_argument('--siggen',  help='signal generator hostname', required=True)
+        parser.add_argument('--post', default=50000, type=int, help='Post samples')
+        parser.add_argument('--pre', default=50000, type=int, help='Pre samples')
+        parser.add_argument('--triggers', default='all', type=parser.list_of_trinarys, help='Triggers to test 1,0,0/1,0,1/1,1,1 or all')
+        parser.add_argument('--events', default='all', type=parser.list_of_trinarys, help='Events to test 1,0,0/1,0,1 or all')
+        return parser
         
     def run(self):
-        self.post = self.args.post if self.args.post else self.post
+        self.post = self.args.post
         self.save_state('post', self.post)
         
-        self.pre = self.args.pre if self.args.pre else self.pre
+        self.pre = self.args.pre
         self.save_state('pre', self.pre)
         
         self.wavelength = self.args.divisor

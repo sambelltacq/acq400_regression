@@ -85,6 +85,3 @@ class Rtm(generic):
             if not self.check_passed(results): break
             
         self.log.info(f"All runs complete {self.run}/{self.runs}")
-
-
-print('imported correctly')

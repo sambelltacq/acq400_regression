@@ -363,6 +363,8 @@ class uut_handler():
     @all_uuts
     def stream_to_host(self, uut, blen=4096, runtime=5, max_bytes=None):
         """Stream data from the uut to a file on the host"""
+        
+        #TODO: make stream status text display here
 
         uut.host_data = f"{uut.hostname}.stream.temp"
         buffer = bytearray(blen * uut.data_size)
@@ -377,9 +379,12 @@ class uut_handler():
                 time_start = 0
                 total_bytes = 0
                 while True:
+                    
                     nbytes = sock.recv_into(view)
                     
-                    if time_start == 0: time_start = time.time()
+                    if time_start == 0:
+                        self.log.info(f"{uut.hostname} Started")
+                        time_start = time.time()
                     total_bytes += nbytes              
                     
                     if nbytes == 0:

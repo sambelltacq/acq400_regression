@@ -3,11 +3,6 @@
 """Tests uuts streaming"""
 
 from acq400_regression.tests.generic import generic
-from acq400_regression.misc import tri, ifnotset
-
-from acq400_hapi import PR, pprint, AcqPorts#remove me after testing
-import numpy as np
-from matplotlib import pyplot as plt
 
 
 class Stream(generic):
@@ -29,6 +24,7 @@ class Stream(generic):
         freq, voltage = self.get_freq_and_voltage()
         self.siggen.config_params(freq, voltage)
         self.siggen.config_contiguous()
+        
         self.uuts.setup(trg='1,0,1')
 
         self.run_iters()
@@ -58,6 +54,6 @@ class Stream(generic):
 if __name__ == '__main__':
     from acq400_regression import Test_Handler
     
-    args = Test_Handler.parser.parse_known_args()[0]
+    args = Test_Handler.parser_args()
     th = Test_Handler(uutnames=args.uutnames, args=args)
     th.run_test('stream')

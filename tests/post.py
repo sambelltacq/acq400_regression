@@ -15,15 +15,19 @@ class Post(generic):
 
     dir_fmt = "{type}_trg{trigger}"
     
-    def parser(parser):
-        print(f"prepost argparser here")
+    @staticmethod
+    def get_args(parser):
+        """Test specific arguments"""
+        parser.add_argument('--siggen',  help='signal generator hostname', required=True)
+        parser.add_argument('--post', default=100000, type=int, help='Post samples')
+        parser.add_argument('--triggers', default='all', type=parser.list_of_trinarys, help='Triggers to test 1,0,0/1,0,1/1,1,1 or all')
+        return parser
 
     def run(self):
-        self.post = self.args.post if self.args.post else self.post
+        self.post = self.args.post
         self.save_state('post', self.post)
         
         self.wavelength = self.args.divisor
-
         freq, voltage = self.get_freq_and_voltage()
 
         for trigger in self.get_trigger():
@@ -59,11 +63,20 @@ class Post(generic):
             self.uuts.wait_completed()
             self.log.info('Completed')
 
-            dataset = self.th.offload_dataset()
+            dataset = self.th.import_dataset()
+            
+            results.append(self.check_spad(dataset))
             
             ideal_wave, tolerance, dtype = self.get_ideal_wave(dataset, self.is_soft(trigger), self.is_rising(trigger))
-
-            results.append(self.check_wave_synchronous(dataset, ideal_wave, tolerance))
-
+            results.append(self.check_wave(dataset, ideal_wave, tolerance))
+            
             if not self.check_passed(results): break
+            
         self.log.info(f"All runs complete {run}/{self.args.runs}")
+        
+if __name__ == '__main__':
+    from acq400_regression import TestHandler
+    
+    args = TestHandler.parser_args()
+    th = TestHandler(uutnames=args.uutnames, args=args)
+    th.run_test('post')

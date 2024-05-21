@@ -148,7 +148,7 @@ class Waveform:
         offset=0,
     ):
         """
-            Generate a square waveform
+            Generate a square waveform TODO
         
         Args:
             tsamples (int): total samples
