@@ -62,7 +62,7 @@ class Prepost(generic):
 
             self.uuts.abort()
 
-            self.uuts.transient(pre=self.pre, post=self.post, trg=trigger, evt=event)
+            self.uuts.setup(pre=self.pre, post=self.post, trg=trigger, evt=event)
 
             self.uuts.arm()
             self.log.info('Arming')
@@ -79,11 +79,12 @@ class Prepost(generic):
             self.uuts.wait_completed(timeout=60)
             self.log.info('Completed')
 
-            dataset = self.th.offload_dataset()
+            dataset = self.th.import_dataset()
+            
+            #results.append(self.check_spad(dataset)) #removed es break spad
             
             ideal_wave, tolerance, dtype = self.get_ideal_wave(dataset, self.is_soft(trigger), self.is_rising(event))
-            
-            results.append(self.check_wave_synchronous(dataset, ideal_wave, tolerance))
+            results.append(self.check_wave(dataset, ideal_wave, tolerance))
 
             if not self.check_passed(results): break
         

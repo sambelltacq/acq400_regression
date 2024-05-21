@@ -117,6 +117,10 @@ class generic():
     
     #Test methods
     
+    def add_removed_es(self):
+        """add removed es into mask"""
+        return
+    
     def check_spad(self, dataset):
         """check spad[0] is contigious"""
         self.log.info('Checking spad')
@@ -127,14 +131,16 @@ class generic():
                 continue
             result = DotDict()
             passed = True
-            contigious = np.all(np.diff(data.spad_data[0]) == 1)
+            diffs = np.diff(data.spad_data[0])
+            contigious = np.all(diffs == 1) #use event mask here to fix missing samples
             if contigious:
                 self.log.success(f"{uutname} spad[0] is contigious")
                 result.spad0_contigious = True
             else:
-                self.log.failure(f"{uutname} spad[0] is contigious")
+                self.log.failure(f"{uutname} spad[0] is not contigious")
                 result.spad0_contigious = False
                 passed = False
+                self.log.debug(np.where(diffs != 1))
             
             results.append(passed)
             self.th.update_subtest('spad', uutname, result) #fix me

@@ -318,7 +318,7 @@ class uut_handler():
     @all_uuts
     def wait_pre_complete(self, uut, target):
         while True:
-            elapsed = uut.statmon.get_elapsed() / uut.nchan
+            elapsed = uut.statmon.get_elapsed() / uut.nchan()
             if elapsed > target:
                 self.log.debug(f"{uut.hostname} pre full")
                 time.sleep(2)
