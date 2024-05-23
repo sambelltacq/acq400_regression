@@ -47,6 +47,8 @@ class BaseTest():
         self.save_state('channels', self.args.channels)
         self.save_state('tolerance', self.args.tolerance)
         self.save_state('cycles', self.args.cycles)
+        
+        if self.args.debug: pprint(self.args)
 
     def catch_error(func):
         """Catches exceptions"""
@@ -134,7 +136,7 @@ class BaseTest():
         
         for uutname, data in dataset.items():
             if len(data.spad_data) < 1:
-                self.log.debug(f"{uutname} No spad")
+                self.log.info(f"{uutname} No spad")
                 continue
             result = DotDict()
             diffs = np.diff(data.spad_data[0])

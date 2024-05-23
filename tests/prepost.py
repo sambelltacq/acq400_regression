@@ -39,7 +39,7 @@ class PrepostTest(BaseTest):
             for event in self.get_event():
 
                 self.siggen.config_params(freq, voltage)
-                self.siggen.config_trigger(trigger, self.args.cycles)
+                self.siggen.config_trigger(event, self.args.cycles)
 
                 self.run_iters(trigger, event)
                 
@@ -77,8 +77,8 @@ class PrepostTest(BaseTest):
             dataset = self.th.import_dataset()
             
             results.append(self.check_spad(dataset, exclude=[self.pre - 1]))
-            
-            ideal_wave, tolerance, dtype = self.get_ideal_wave(dataset, self.is_soft(trigger), self.is_rising(event))
+
+            ideal_wave, tolerance, dtype = self.get_ideal_wave(dataset, self.is_soft(event), self.is_rising(event))
             results.append(self.check_wave(dataset, ideal_wave, tolerance))
 
             if not self.check_passed(results): break

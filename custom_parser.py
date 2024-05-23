@@ -72,7 +72,7 @@ def get_default_parser():
     parser.add_argument('--debug', default=False, action='store_true', help=f"Enabled debug")
     parser.add_argument('--master', default=None, help=f"override master uut")
     parser.add_argument('--master_role', default=None, help=f"master role")
-    parser.add_argument('--spad', default='0,0,0', help=f"spad value")
+    parser.add_argument('--spad', default='1,1,0', help=f"spad value")
     #positional
     parser.add_argument('uutnames', nargs='+', help='list of uut hostnames')
     return parser

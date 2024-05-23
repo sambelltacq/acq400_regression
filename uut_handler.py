@@ -256,9 +256,7 @@ class uut_handler():
     def arm(self, uut):
         self.log.debug(f"Arming {uut.hostname}")
         self.update_shots(uut)
-
         uut.s0.set_arm = 1
-        print('armed here')
 
     @all_uuts
     def start_stream(self, uut):
@@ -315,16 +313,13 @@ class uut_handler():
 
     @all_uuts
     def wait_pre_complete(self, uut, target):
-        ttime = target / uut.clk
-        print(f"ttime {ttime}")
         while True:
             elapsed = uut.statmon.get_elapsed() / uut.nchan()
-            print(f"target {target} elapsed {elapsed}")
             if elapsed > target:
-                self.log.debug(f"{uut.hostname} pre full")
+                self.log.debug(f"{uut.hostname} pre complete {elapsed}/{target}")
                 time.sleep(2)
                 break
-            self.log.debug(f"{uut.hostname} wait for pre full")
+            self.log.debug(f"{uut.hostname} pre wait {elapsed}/{target}")
             time.sleep(0.5)
 
     @all_uuts

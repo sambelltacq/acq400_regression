@@ -1,0 +1,39 @@
+
+
+//TEST TYPES:
+
+post ✅
+prepost ✅
+rtm ✅
+stream ✅
+rgm
+llc
+bolo
+dual burst
+multievent
+master/slave
+gpg
+hudp
+wr
+slowmon
+gpg
+dio_loopback
+
+
+
+
+
+
+TODO
+
+fix stream error [17229.194275] acq420 40000000.acq2006sc: WAITING for work task
+wget enabled packages from box
+add check for stream if clk * data_size is to fast for ethernet
+add overview that prints type of tests runs/failures at test handler end
+
+
+prepost problem
+Trigger [1, 1, 1] Event [1, 0, 0]
+
+
+
