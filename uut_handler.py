@@ -9,7 +9,7 @@ provides methods for mass getting and setting knobs
 import acq400_hapi
 import time
 import re
-from acq400_regression.misc import tri, RThread, all_uuts, DotDict, ifnotset
+from acq400_regression.misc import tri, RThread, all_uuts, DotDict, ifnotset, background_task
 from acq400_hapi import PR, pprint, pv, STATE, AcqPorts
 
 
@@ -55,7 +55,7 @@ class uut_handler():
             
             
             #pprint(uut.config)
-            self.update_shots(uut) #remove me?
+            self.prearm(uut) #remove me?
             self.conns[uutname] = uut
             
     def __getitem__(self, key):
@@ -91,6 +91,7 @@ class uut_handler():
             decim = int(pv(uut.s1.ACQ480_FPGA_DECIM))
             clk  = int(clk  / decim)
         self.log.debug(f"{uut.hostname} clk: {clk}")
+        return round(clk, 1)
         return clk
 
     def get_voltage(self, uut):
@@ -182,7 +183,7 @@ class uut_handler():
                 self.log.error(f"knob [{uutname} {site} {knob}] invalid")
         return values
     
-    def update_shots(self, uut):
+    def prearm(self, uut):
         uut.shot = int(uut.s1.shot)
         uut.completed_shot = int(uut.s1.completed_shot)
         self.log.debug(f"{uut.hostname} shot: {uut.shot} completed_shot: {uut.completed_shot}")
@@ -199,7 +200,6 @@ class uut_handler():
                 #return self[attr]
                 raise Exception('test1')
 
-                
 
         d1 = {
             'hello': 'world'    
@@ -211,10 +211,7 @@ class uut_handler():
         print(d2)
         
         exit()
-        
-        
-        
-        
+    
         from acq400_hapi.afhba404 import get_connections
         afhba_cons = get_connections()
         for uut in self: uut.afhba404 = {}
@@ -255,13 +252,13 @@ class uut_handler():
     @all_uuts
     def arm(self, uut):
         self.log.debug(f"Arming {uut.hostname}")
-        self.update_shots(uut)
+        self.prearm(uut)
         uut.s0.set_arm = 1
 
     @all_uuts
     def start_stream(self, uut):
         PR.Red('Start stream')
-        self.update_shots(uut)
+        self.prearm(uut)
         uut.s0.CONTINUOUS = 1 
     
     @all_uuts 
@@ -355,13 +352,16 @@ class uut_handler():
         uut.s0.run0 = f"{uut.s0.sites}"
         uut.s0.run0 = f"{uut.s0.sites} {tri(spad)}"
         time.sleep(1)
-
+        
     @all_uuts
+    def init_stream_to_host(self, uut, runtime=5, max_bytes=None):
+        self.prearm(uut)
+        uut.thread = self.stream_to_host(uut, runtime=runtime, max_bytes=max_bytes)
+
+    @background_task
     def stream_to_host(self, uut, blen=4096, runtime=5, max_bytes=None):
         """Stream data from the uut to a file on the host"""
         
-        #TODO: make stream status text display here
-
         uut.host_data = f"{uut.hostname}.stream.temp"
         buffer = bytearray(blen * uut.data_size)
         view = memoryview(buffer).cast('B')
@@ -377,11 +377,11 @@ class uut_handler():
                 while True:
                     
                     nbytes = sock.recv_into(view)
+                    total_bytes += nbytes
                     
                     if time_start == 0:
                         self.log.info(f"{uut.hostname} Started")
-                        time_start = time.time()
-                    total_bytes += nbytes              
+                        time_start = time.time()            
                     
                     if nbytes == 0:
                         self.log.error(f"{uut.hostname} stream stopped from UUT")
@@ -399,7 +399,6 @@ class uut_handler():
                     
                 fp.flush()
             sock.shutdown(socket.SHUT_RDWR)
-                    
         self.log.info(f"{uut.hostname} Complete {total_bytes} Bytes")
                     
                     
