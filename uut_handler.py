@@ -397,6 +397,9 @@ class uut_handler():
                         self.log.info(f"Reached max bytes")
                         break
                     
+                fp.flush()
+            sock.shutdown(socket.SHUT_RDWR)
+                    
         self.log.info(f"{uut.hostname} Complete {total_bytes} Bytes")
                     
                     
