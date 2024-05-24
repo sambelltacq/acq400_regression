@@ -5,6 +5,7 @@ import argparse
 from threading import Thread
 from functools import wraps
 import sys as _sys
+import os
 
 from acq400_hapi import pprint, PR #remove me
 
@@ -14,7 +15,7 @@ def all_uuts(func):
     def wrapper(self, *args, **kwargs):
         threads = []
         out = {}
-        for uutname, uut  in self.conns.items():
+        for uutname, uut in self.conns.items():
             thread = RThread(target=func, args=[self, uut, *args], kwargs=kwargs)
             threads.append(thread)
             thread.start()
@@ -24,10 +25,12 @@ def all_uuts(func):
     return wrapper
 
 
-def backstage(func):
+def background_task(func):
+    """Runs passed function in the background returns thread"""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         thread = RThread(target=func, args=[self, *args], kwargs=kwargs)
+        thread.daemon = True
         thread.start()
         return thread
     return wrapper
@@ -119,3 +122,27 @@ def ifnotset(value, default):
     """If value is set return value else default"""
     if value: return value
     return default
+
+def print_dirs(rootdir):
+    """Prints the contents of passed filepath"""
+    
+    print(f"[{rootdir}]")
+    def printline(line, depth):
+        pre=''
+        pre += "│   " * depth
+        if depth > 0: pre += "├──"
+        print(f"{pre}{line}")
+    
+    rootdir = rootdir.rstrip('/')
+    base_depth = len(rootdir.split('/'))
+    for (root, dirs, files) in os.walk(rootdir, topdown=True):
+        depth = len(root.split('/'))
+        dirname = os.path.basename(root)
+        if depth == base_depth:
+            for idx, dirname in enumerate(root.split('/')):
+                printline(f"📁 {dirname}/", idx)
+        else:
+            printline(f"📁 {dirname}/", depth)
+            
+        for filename in files:
+            printline(filename, depth + 1)
