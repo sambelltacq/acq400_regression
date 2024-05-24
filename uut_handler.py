@@ -91,7 +91,6 @@ class uut_handler():
             decim = int(pv(uut.s1.ACQ480_FPGA_DECIM))
             clk  = int(clk  / decim)
         self.log.debug(f"{uut.hostname} clk: {clk}")
-        return round(clk, 1)
         return clk
 
     def get_voltage(self, uut):

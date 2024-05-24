@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 from acq400_hapi import PR, pprint, acq400_logger
 from acq400_regression.uut_handler import uut_handler
 from acq400_regression.siggen_handler import siggen_handler
-from acq400_regression.misc import DotDict, custom_legend, to_hex
+from acq400_regression.misc import DotDict, custom_legend, to_hex, print_dirs
 
 
 from acq400_regression.custom_parser import get_default_parser, RegressionParser
@@ -88,6 +88,7 @@ class TestHandler():
         self.log.info("All tests complete")
         if self.args.save: self.results_to_file()
         if self.args.url: self.send_to_remote(self.args.url)
+        print_dirs(self.dir)
         
     def add_test_args(self):
         """Adds test specific args"""

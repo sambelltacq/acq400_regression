@@ -3,7 +3,7 @@
 """Tests uuts streaming"""
 
 from acq400_regression.BaseTest import BaseTest
-from acq400_regression.misc import tri
+from acq400_regression.misc import tri, ifnotset
 
 class StreamTest(BaseTest):
     test_type = "stream"
@@ -15,7 +15,7 @@ class StreamTest(BaseTest):
         """Test specific arguments"""
         parser.add_argument('--siggen',  help='signal generator hostname', required=True)
         parser.add_argument('--runtime', default=5, type=int, help=f"stream runtime")
-        parser.add_argument('--period', default=0.2, type=float, help=f"override burst period")
+        parser.add_argument('--period', default=None, type=float, help=f"override burst period")
         parser.add_argument('--triggers', default='all', type=parser.list_of_trinarys, help='Triggers to test 1,0,0/1,0,1/1,1,1 or all')
         return parser
 
@@ -23,13 +23,10 @@ class StreamTest(BaseTest):
         self.save_state('runtime', self.args.runtime)
         self.wavelength = self.args.wavelength #add into args
         
-        clk = [uut.clk for uut in self.uuts][0] #TODO make nicer
-        tlen = self.wavelength * self.args.cycles
-        self.period = round(tlen / clk * 3, 2)
-        print(f"period {self.period}")
+        self.period = ifnotset(self.args.period, self.get_burst_period(5))
+        self.save_state('period', self.period)
         
         freq, voltage = self.get_freq_and_voltage()
-        
         
         for trigger in self.get_trigger():
             trigger = '1,0,1' #decide test triggers

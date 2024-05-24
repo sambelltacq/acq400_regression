@@ -117,6 +117,11 @@ class BaseTest():
         self.save_state('voltage', voltage)
         return freq, voltage
     
+    def get_burst_period(self, factor=1):
+        """Retuns burst period of len wavelength * factor in ms"""
+        clk = [uut.clk for uut in self.uuts][0] #TODO make nicer
+        tlen = self.wavelength * self.args.cycles
+        return round(tlen / clk * factor, 2)
     
     #Test methods
     
