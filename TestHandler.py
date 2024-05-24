@@ -154,7 +154,7 @@ class TestHandler():
         self.log.info('Importing data')
         self.dataset = {}
         for uut in self.uuts:#TODO: cleanup
-            self.log.debug(f"Importing data data from {uut.hostname}")
+            self.log.debug(f"Importing from {uut.hostname if source == 'UUT' else uut.host_data}")
             data = DotDict()
             data.data_size = uut.data_size
             data.nchan = uut.nchan()
@@ -192,11 +192,14 @@ class TestHandler():
     def read_channels_from_file(self, uut):             
         self.log.debug(f"Importing data from {uut.host_data}")
         #check file exists here
-        #add dir support GLOBBING here
+        #add dir support GLOBBING here    
         nchan = uut.nchan()
         dtype = np.int32 if int(uut.s0.data32) else np.int16
-        remainder = int(os.path.getsize(uut.host_data) / uut.data_size) % nchan
-        return np.fromfile(uut.host_data, dtype=dtype)[:-remainder].reshape(-1, nchan).T      
+        length = int(os.path.getsize(uut.host_data) / uut.data_size)
+        overflow = int(length % nchan)
+        trim = length - overflow
+        self.log.debug(f"reading from file {uut.host_data} {trim}/{length}")
+        return np.fromfile(uut.host_data, dtype=dtype)[:trim].reshape(-1, nchan).T      
     
     def to_uint32(self, data):
         """Converts data to uint32"""
