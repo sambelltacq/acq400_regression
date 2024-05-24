@@ -52,5 +52,17 @@ class siggen_handler(Agilent33210A):
     def config_contiguous(self):
         self.send('BURS:STAT OFF')
         self.send('TRIG:SOUR IMM')
+        
+    def enable_free_running_burst(self, cycles=1, period=0.2):
+        self.send('TRIG:SOUR EXT')
+        self.send('BURS:STAT ON')
+        self.send(f"BURS:NCYC {cycles}")
+        self.send(f"BURS:INT:PER {period}")
+        
+    def start_free_running_burst(self):
+        self.send('TRIG:SOUR IMM')
+        
+        
+        
     
 
