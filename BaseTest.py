@@ -9,6 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import time
+import os
 
 class BaseTest():
     test_type = 'base'
@@ -138,7 +139,7 @@ class BaseTest():
         """check spad[0] is contigious"""
         self.log.info('Checking spad')
         results = []
-        
+        print(dataset)
         for uutname, data in dataset.items():
             if len(data.spad_data) < 1:
                 self.log.info(f"{uutname} No spad")
@@ -153,12 +154,27 @@ class BaseTest():
             else:
                 self.log.failure(f"{uutname} spad[0] is not contigious")
                 result.spad0_contigious = False
-                self.log.debug(np.where(diffs != 1))
-            
+                self.save_spad_errors(uutname, diffs)
             results.append(passed)
             self.th.update_subtest('spad', uutname, result) #fix me
         return all(results)
-
+    
+    def save_spad_errors(self, uutname, diffs):
+        """print and save spad"""
+        errors = 5
+        jumps = np.where(diffs != 1)
+        if len(jumps) < 1: return
+        filepath = os.path.join(self.get_test_subdir(), f"{uutname}.jumps")
+        with open(filepath, 'w') as fp:
+            self.log.debug(f"Writing spad jumps to {filepath}")
+            for jump in jumps:
+                if self.args.debug and errors > 0:
+                    self.log.error(f"SPAD [{jump}]: {diffs[jump]}")
+                    errors -= 1
+                fp.write(f"[{jump}] {diffs[jump]} \n")
+            
+            
+            
     def check_es(self, dataset, expected_indices=[]):
         """Check the event signatures are at expected indexes"""
         self.log.info('Checking event signatures')
@@ -217,10 +233,18 @@ class BaseTest():
                 
                 dtype = chan_data.dtype
                 tolerance = Waveform.get_tolerance(chan_data, self.args.tolerance)
+                """                
+                print()
+                PR.Yellow(f"tsamples={data.datalen}")
+                PR.Yellow(f"wavelength={self.wavelength}")
+                PR.Yellow(f"cycles={self.args.cycles}")
+                PR.Yellow(f"eindex={self.get_event_indexes()}")
+                PR.Yellow(f"translen={self.translen}")"""
                 
                 ideal_wave = Waveform.generate_ideal_wave(
                     chan_data, 
                     tsamples=self.pre+self.post,
+                    #tsamples=data.datalen,
                     wavelength=self.wavelength,
                     cycles=self.args.cycles,
                     eindex=self.get_event_indexes(),

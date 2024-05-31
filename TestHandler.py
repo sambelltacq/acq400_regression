@@ -163,22 +163,24 @@ class TestHandler():
             if source == 'UUT':
                 data.data = uut.read_channels()
             elif source == 'HOST':
-                data.data = self.read_channels_from_file(uut) #add multi file support          
+                data.data = self.read_channels_from_file(uut) #add multi file support
             
             data.channels = {}
             for chan in self.get_channels(uut):
-                if chan > uut.nchan(): continue
+                
+                if not (1 <= chan <= uut.nchan()): continue
                 data.channels[chan] = data.data[chan - 1]
                 
-            data.spad_data = {}   
+                #PR.Blue(f"CHANNEL {chan} max is {data.channels[chan].max()}") #remove me
+                
+            data.spad_data = {}
             for spad, spadchan in self.get_spad(uut).items():
-                chans = [spadchan]
                 if uut.data_size == 2:
-                    chans.append(spadchan + 1)
+                    chans = [spadchan, spadchan + 1]
                     data.spad_data[spad] = data.data[chans].T.reshape(-1).view(np.uint32)
                 elif uut.data_size == 4: #untested
-                    data.spad_data[spad] = data.data[chans].view(np.uint32)
-            
+                    data.spad_data[spad] = data.data[spadchan].view(np.uint32)
+                    
             data.datalen = len(data.data[0])
             data.es_indexes = self.find_event_signatures(self.to_uint32(data.data))
             
@@ -252,10 +254,11 @@ class TestHandler():
             
             for chan, chan_data in data.channels.items():
                 plt.plot(chan_data[mask], label=f"CH{chan}")
-
-            if hasattr(self.test, 'ideal_wave'):
-                plt.plot(self.test.ideal_wave, label=f"ideal_wave")
                 
+                
+            if hasattr(self.test, 'ideal_wave'):
+                plt.plot(self.test.ideal_wave, label=f"ideal_wave")    
+                        
             custom_legend(plt)
             
             if save:
@@ -263,6 +266,13 @@ class TestHandler():
                 savepath = os.path.join(self.get_test_subdir(), filename)
                 self.log.info(f"Saving plot to {savepath}")
                 plt.savefig(savepath)
+                
+            for spad, spad_data in data.spad_data.items():
+                plt.figure('spad')
+                plt.clf()
+                plt.gcf().set_size_inches(8, 6)
+                plt.title('Spad')
+                plt.plot(spad_data, label=f"{uutname} SPAD{spad}")
         
         if plot:
             self.log.info("Plotting")

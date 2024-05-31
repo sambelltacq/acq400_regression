@@ -5,6 +5,9 @@
 from acq400_regression.BaseTest import BaseTest
 from acq400_regression.misc import tri, ifnotset
 
+from acq400_hapi import PR
+from matplotlib import pyplot as plt
+
 class StreamTest(BaseTest):
     test_type = "stream"
 
@@ -23,13 +26,28 @@ class StreamTest(BaseTest):
         self.save_state('runtime', self.args.runtime)
         self.wavelength = self.args.wavelength #add into args
         
-        self.period = ifnotset(self.args.period, self.get_burst_period(5))
+        self.period = ifnotset(self.args.period, self.get_burst_period(10))
+        """
+        burst period can be set automatically ro via arg
+        
+        translen must be calculated from period * CLk
+        
+        20,000 wavelength * 10 factor = 200,000
+        
+        
+        0.2 * CLK
+        
+        """
+        
         self.save_state('period', self.period)
+        PR.Red(f"PERIOD is {self.period}")
         
         freq, voltage = self.get_freq_and_voltage()
         
+        PR.Yellow(f"voltage is {voltage} freq is {freq}")
+        
         for trigger in self.get_trigger():
-            trigger = '1,0,1' #decide test triggers
+            #trigger = '1,0,1' #decide test triggers
             
             self.siggen.config_params(freq, voltage)
             
@@ -67,9 +85,17 @@ class StreamTest(BaseTest):
             dataset = self.th.import_dataset('HOST')
             results.append(self.check_spad(dataset))
             
-            #TODO: check waveform here
+            
+            """clk = [uut.clk for uut in self.uuts][0]
+            self.translen = int(self.period * clk)
+            self.pre = 0
+            self.post = dataset[self.uuts[0].hostname].datalen
+            PR.Yellow(self.translen)
+            ideal_wave, tolerance, dtype = self.get_ideal_wave(dataset)
+            results.append(self.check_wave(dataset, ideal_wave, tolerance))"""
             
             if not self.check_passed(results): break
+            #self.check_passed(results)
         self.log.info(f"All runs complete {self.run}/{self.runs}") 
             
             
