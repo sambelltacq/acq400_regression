@@ -21,7 +21,7 @@ The package provides a command-line interface accessible via `acq400_regression`
 
 ```bash
 # List tests
-acq400_regression tests --help
+acq400_regression test --help
 
 # Test post
 acq400_regression test post acq2206_088 --siggen=SG0792

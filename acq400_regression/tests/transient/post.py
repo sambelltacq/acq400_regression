@@ -1,0 +1,61 @@
+from acq400_regression.tests.test_common import TestCommon
+from acq400_regression.arg_parser import ArgTypes
+
+"""
+Post
+
+Test post transient operation and data capture
+
+Usage:
+    acq400_regression test post acq1001_084 --siggen=SG0106 --post=100000 --trigger=1,0,1
+"""
+
+class Post(TestCommon):
+
+    all_triggers = ["1,0,0", "1,0,1", "1,1,1"]
+
+    run_params = ['post', 'trigger']
+
+    checks = ['spad', 'synchronous']
+    
+    @classmethod
+    def get_args(cls, parser):
+        parser.add_argument('--siggen', help='signal generator hostname', required=True)
+        parser.add_argument('--post', default=100000, type=ArgTypes.list_of_ints, help='Post samples')
+        parser.add_argument('--trigger', '--triggers', default='all', type=ArgTypes.list_of_trinarys(cls.all_triggers), help='Triggers to test 1,0,0/1,0,1/1,1,1 or all')
+        return parser
+
+    def start_test(self):      
+        for params in self.get_run_parameters():
+            self.start_run(**params)
+
+    def start_run(self, trigger, post, **kwargs):
+
+        freq, voltage = self.calc_freq_and_voltage()
+        self.siggen.config_waveform(freq, voltage)
+        self.siggen.config_burst(burst=(trigger.source != 1), cycles=self.args.cycles)
+
+        self.uuts.abort()
+
+        self.uuts.setup(
+            post=post,
+            trigger=trigger,
+            demux=self.args.demux,
+            spad=self.args.spad
+        )
+
+        for shot in self.get_run_shot():
+
+            self.uuts.arm()
+            self.uuts.wait_armed()
+            print('Ready')
+
+            if trigger.source != 1: self.siggen.trigger()
+            else: self.uuts.pulse_soft_trigger()
+            print('Triggered')
+
+            self.uuts.wait_idle()
+            print('Stopped')
+
+            dataset = self.read_transient_data()
+
