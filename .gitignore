@@ -1,0 +1,7 @@
+acq-test-framework-design-5cac5d34.plan.md
+*.pyc
+*.egg-info
+Regression_Notes/
+build/
+acq400_regression.log
+acq400_regression_old
